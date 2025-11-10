@@ -1,0 +1,46 @@
+name: Run Playwright Tests (Java)
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Set up Java (JDK 17)
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # 3. Cache Maven dependencies
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      # 4. Install Playwright browsers
+      - name: Install Playwright browsers
+        run: mvn exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install"
+
+      # 5. Run the tests
+      - name: Run Playwright JUnit tests
+        run: mvn test
+
+      # 6. Upload test results (optional)
+      - name: Archive test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: target/surefire-reports/
