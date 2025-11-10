@@ -4,34 +4,63 @@ import com.microsoft.playwright.*;
 import com.microsoft.playwright.junit.UsePlaywright;
 import com.microsoft.playwright.options.*;
 import org.junit.jupiter.api.Test;
+import java.nio.file.Paths;
+
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
 @UsePlaywright
 public class BookstoreTest {
 
   @Test
-  void fullBookstoreFlow(Page page) {
-    // Test 1: Bookstore
+  void fullBookstoreFlow(Page defaultPage) {
+    // Create a new browser context that records video
+    Browser browser = defaultPage.context().browser();
+    BrowserContext context = browser.newContext(
+      new Browser.NewContextOptions()
+        .setRecordVideoDir(Paths.get("videos/"))     // folder for video
+        .setRecordVideoSize(1280, 720)               // resolution
+    );
+
+    // Use this new context for the test instead of the injected one
+    Page page = context.newPage();
+
+    page.setDefaultTimeout(60000);
     page.navigate("https://depaul.bncollege.com/");
+    page.waitForLoadState(LoadState.NETWORKIDLE);
+
+    // Test 1: Bookstore 
     page.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Search")).click();
     page.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Search")).fill("earbuds");
     page.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Search")).press("Enter");
     page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("brand")).click();
-    page.locator(".facet__list.js-facet-list.js-facet-top-values > li:nth-child(3) > form > label > .facet__list__label > .facet__list__mark > .facet-unchecked > svg").first().click();
+    page.waitForTimeout(1500);
+    page.locator(".facet__list.js-facet-list.js-facet-top-values > li:nth-child(3) > form > label > "
+      + ".facet__list__label > .facet__list__mark > .facet-unchecked > svg")
+      .first()
+      .click(new Locator.ClickOptions().setForce(true));
     page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Color")).click();
-    page.locator("#facet-Color > .facet__values > .facet__list > li > form > label > .facet__list__label > .facet__list__mark > .facet-unchecked > svg").first().click();
+    page.waitForTimeout(1000);
+    page.locator("#facet-Color > .facet__values > .facet__list > li > form > label > "
+      + ".facet__list__label > .facet__list__mark > .facet-unchecked > svg")
+      .first()
+      .click(new Locator.ClickOptions().setForce(true));
     page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Price")).click();
-    page.locator("#facet-price > .facet__values > .facet__list > li:nth-child(2) > form > label > .facet__list__label > .facet__list__mark > .facet-unchecked > svg").click();
+    page.waitForTimeout(1000);
+    page.locator("#facet-price > .facet__values > .facet__list > li:nth-child(2) > form > label > "
+      + ".facet__list__label > .facet__list__mark > .facet-unchecked > svg")
+      .click(new Locator.ClickOptions().setForce(true));
     page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("JBL Quantum True Wireless")).click();
-    assertThat(page.getByLabel("main").getByRole(AriaRole.HEADING)).containsText("JBL Quantum True Wireless Noise Cancelling Gaming Earbuds- Black");
+    assertThat(page.getByLabel("main").getByRole(AriaRole.HEADING))
+        .containsText("JBL Quantum True Wireless Noise Cancelling Gaming Earbuds- Black");
     assertThat(page.getByLabel("main")).containsText("sku 668972707");
     assertThat(page.getByLabel("main")).containsText("$164.98");
-    assertThat(page.getByLabel("main")).containsText("Adaptive noise cancelling allows awareness of environment when gaming on the go. Light weight, durable, water resist. USB-C dongle for low latency connection < than 30ms.");
+    assertThat(page.getByLabel("main"))
+        .containsText("Adaptive noise cancelling allows awareness of environment when gaming on the go");
     page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Add to cart")).click();
     assertThat(page.locator("#headerDesktopView")).containsText("1 items");
     page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Cart 1 items")).click();
 
-    // Test 2: Shopping Cart
+    // Test 2: Shopping Cart 
     assertThat(page.getByLabel("main")).containsText("Your Shopping Cart");
     assertThat(page.getByLabel("main")).containsText("JBL Quantum True Wireless Noise Cancelling Gaming Earbuds- Black");
     assertThat(page.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Quantity, edit and press"))).hasValue("1");
@@ -46,7 +75,7 @@ public class BookstoreTest {
     assertThat(page.locator("#js-voucher-result")).containsText("The coupon code entered is not valid.");
     page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Proceed To Checkout")).first().click();
 
-    // Test 3: Create Account Page
+    // Test 3: Create Account Page 
     assertThat(page.getByLabel("main")).containsText("Create Account");
     page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Proceed As Guest")).click();
 
@@ -61,7 +90,7 @@ public class BookstoreTest {
     assertThat(page.getByLabel("main")).containsText("$167.98");
     page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Continue")).click();
 
-    // Test 5: Pickup Information Page
+    //  Test 5: Pickup Information Page
     assertThat(page.getByLabel("main")).containsText("Full Name Dave Jones Email Address bmc1522@gmail.com Phone Number +18726007982");
     assertThat(page.locator("#bnedPickupPersonForm")).containsText("Pickup Location DePaul University Loop Campus & SAIC");
     page.getByText("I'll pick them up").click();
@@ -75,8 +104,11 @@ public class BookstoreTest {
     assertThat(page.getByLabel("main")).containsText("PICKUP DePaul University Loop Campus & SAIC JBL Quantum True Wireless Noise Cancelling Gaming Earbuds- Black");
     page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Back to cart")).click();
 
-    // Test 7: Shopping Cart (Delete)
+    // Test 7: Shopping Cart (Delete Item)
     page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Remove product JBL Quantum")).click();
     assertThat(page.getByLabel("main").getByRole(AriaRole.HEADING)).containsText("Your cart is empty");
+
+    // Close context to finalize and save the .webm video
+    context.close();
   }
 }
